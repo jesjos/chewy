@@ -8,6 +8,10 @@ module Chewy
       render_action('Import', event) { |payload| payload[:import] }
     end
 
+    def fetch_indexed_objects(event)
+      render_action('Fetch indexed objects', event) { |payload| payload[:load] }
+    end
+
     def search_query(event)
       render_action('Search', event) { |payload| payload[:request] }
     end

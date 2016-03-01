@@ -74,16 +74,18 @@ module Chewy
         #   UsersIndex::User.import users.map(&:id) # user ids will be deleted from index
         #
         def import *args, &block
-          import_options = args.extract_options!
-          batch_size = import_options[:batch_size] || BATCH_SIZE
+          ActiveSupport::Notifications.instrument 'adapter_load_objects.chewy', type: self do |payload|
+            import_options = args.extract_options!
+            batch_size = import_options[:batch_size] || BATCH_SIZE
 
-          collection = args.empty? ? default_scope :
-            (args.one? && args.first.is_a?(relation_class) ? args.first : args.flatten.compact)
+            collection = args.empty? ? default_scope :
+              (args.one? && args.first.is_a?(relation_class) ? args.first : args.flatten.compact)
 
-          if collection.is_a?(relation_class)
-            import_scope(collection, batch_size, &block)
-          else
-            import_objects(collection, batch_size, &block)
+            if collection.is_a?(relation_class)
+              import_scope(collection, batch_size, &block)
+            else
+              import_objects(collection, batch_size, &block)
+            end
           end
         end
 

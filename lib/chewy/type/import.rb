@@ -170,26 +170,28 @@ module Chewy
         end
 
         def fetch_indexed_objects(objects)
-          ids = objects.map { |object| object.respond_to?(:id) ? object.id : object }
-          result = client.search index: index_name,
-                                 type: type_name,
-                                 fields: '_parent',
-                                 body: { filter: { ids: { values: ids } } },
-                                 search_type: 'scan',
-                                 scroll: '1m'
+          ActiveSupport::Notifications.instrument 'fetch_indexed_objects.chewy', type: self do |payload|
+            ids = objects.map { |object| object.respond_to?(:id) ? object.id : object }
+            result = client.search index: index_name,
+                                   type: type_name,
+                                   fields: '_parent',
+                                   body: { filter: { ids: { values: ids } } },
+                                   search_type: 'scan',
+                                   scroll: '1m'
 
-          indexed_objects = {}
+            indexed_objects = {}
 
-          while result = client.scroll(scroll_id: result['_scroll_id'], scroll: '1m') do
-            break if result['hits']['hits'].empty?
+            while result = client.scroll(scroll_id: result['_scroll_id'], scroll: '1m') do
+              break if result['hits']['hits'].empty?
 
-            result['hits']['hits'].map do |hit|
-              parent = hit.has_key?('_parent') ? hit['_parent'] : hit['fields']['_parent']
-              indexed_objects[hit['_id']] = { parent: parent }
+              result['hits']['hits'].map do |hit|
+                parent = hit.has_key?('_parent') ? hit['_parent'] : hit['fields']['_parent']
+                indexed_objects[hit['_id']] = { parent: parent }
+              end
             end
-          end
 
-          indexed_objects
+            indexed_objects
+          end
         end
       end
     end
