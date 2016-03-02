@@ -26,9 +26,10 @@ module Chewy
 
           ActiveSupport::Notifications.instrument 'import_objects.chewy', type: self do |payload|
             adapter.import(*args, import_options) do |action_objects|
-              indexed_objects = build_root.parent_id && fetch_indexed_objects(action_objects.values.flatten)
-              body = bulk_body(action_objects, indexed_objects)
-
+              body = ActiveSupport::Notifications.instrument 'create_bulk_body.chewy', type: self do |inner_payload|
+                indexed_objects = build_root.parent_id && fetch_indexed_objects(action_objects.values.flatten)
+                bulk_body(action_objects, indexed_objects)
+              end
               errors = bulk(bulk_options.merge(body: body)) if body.present?
 
               fill_payload_import payload, action_objects
@@ -66,12 +67,14 @@ module Chewy
         # Wraps elasticsearch-ruby client indices bulk method.
         # Adds `:suffix` option to bulk import to index with specified suffix.
         def bulk options = {}
-          suffix = options.delete(:suffix)
+          ActiveSupport::Notifications.instrument 'bulk_request.chewy', type: self do |inner_payload|
+            suffix = options.delete(:suffix)
 
-          result = client.bulk options.merge(index: index.build_index_name(suffix: suffix), type: type_name)
-          Chewy.wait_for_status
+            result = client.bulk options.merge(index: index.build_index_name(suffix: suffix), type: type_name)
+            Chewy.wait_for_status
 
-          extract_errors result
+            extract_errors result
+          end
         end
 
       private

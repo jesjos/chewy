@@ -9,7 +9,7 @@ module Chewy
     end
 
     def fetch_indexed_objects(event)
-      render_action('Fetch indexed objects', event) { |payload| payload[:load] }
+      debug("  Fetch indexed objects (#{event.duration.round(1)}ms)")
     end
 
     def search_query(event)
@@ -18,6 +18,14 @@ module Chewy
 
     def delete_query(event)
       render_action('Delete by Query', event) { |payload| payload[:request] }
+    end
+
+    def bulk_request(event)
+      debug("  Bulk request (#{event.duration.round(1)}ms)")
+    end
+
+    def create_bulk_body(event)
+      debug("  Create bulk body (#{event.duration.round(1)}ms)")
     end
 
     def render_action action, event, &block
